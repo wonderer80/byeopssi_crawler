@@ -32,8 +32,8 @@ def send_update_message
       unless result
         text = "\"#{post[:author]}\" 님의 \"#{post[:title]}\" 게시물이 올라왔어요!\n#{post[:link]}"
 
-        send_message_to_all_channel(text, bot)
         write_db(post[:title], post[:author])
+        send_message_to_all_channel(text, bot)
       end
     end
   end
@@ -117,6 +117,9 @@ def send_message_to_all_channel(text, bot)
 
   rescue  Aws::DynamoDB::Errors::ServiceError => error
     puts "Unable to scan:"
+    puts "#{error.message}"
+  rescue StandardError => error
+    puts "Unknown error"
     puts "#{error.message}"
   end
 end
