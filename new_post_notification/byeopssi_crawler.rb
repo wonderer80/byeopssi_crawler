@@ -23,7 +23,6 @@ end
 
 def send_update_message
   token = ENV['token']
-  chat_id = ENV['chat_id']
 
   Telegram::Bot::Client.run(token) do |bot|
     posts = latest_posts.compact
@@ -32,7 +31,8 @@ def send_update_message
 
       unless result
         text = "\"#{post[:author]}\" 님의 \"#{post[:title]}\" 게시물이 올라왔어요!\n#{post[:link]}"
-        bot.api.send_message(chat_id: chat_id, text: text)
+
+        send_message_to_all_channel(text, bot)
         write_db(post[:title], post[:author])
       end
     end
@@ -87,3 +87,37 @@ def regist_chat_id(chat_id)
 
   dynamodb.put_item(params)
 end
+
+def send_message_to_all_channel(text, bot)
+  dynamodb = Aws::DynamoDB::Client.new(region: 'ap-northeast-2')
+  table_name = ENV['byeopssi_chat_ids_table_name']
+
+  params = {
+      table_name: table_name,
+      projection_expression: 'chat_id'
+  }
+
+  begin
+    loop do
+      result = dynamodb.scan(params)
+
+      result.items.each do |item|
+        chat_id = item['chat_id']
+        next unless chat_id
+
+        puts "chat_id: #{item['chat_id']}"
+        bot.api.send_message(chat_id: chat_id, text: text)
+      end
+
+      break if result.last_evaluated_key.nil?
+
+      puts "Scanning for more..."
+      params[:exclusive_start_key] = result.last_evaluated_key
+    end
+
+  rescue  Aws::DynamoDB::Errors::ServiceError => error
+    puts "Unable to scan:"
+    puts "#{error.message}"
+  end
+end
+
