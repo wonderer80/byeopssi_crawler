@@ -97,8 +97,8 @@ def send_message_to_all_channel(text, bot)
       projection_expression: 'chat_id'
   }
 
-  begin
-    loop do
+  loop do
+    begin
       result = dynamodb.scan(params)
 
       result.items.each do |item|
@@ -113,14 +113,13 @@ def send_message_to_all_channel(text, bot)
 
       puts "Scanning for more..."
       params[:exclusive_start_key] = result.last_evaluated_key
+    rescue  Aws::DynamoDB::Errors::ServiceError => error
+      puts "Unable to scan:"
+      puts "#{error.message}"
+    rescue StandardError => error
+      puts "Unknown error"
+      puts "#{error.message}"
     end
-
-  rescue  Aws::DynamoDB::Errors::ServiceError => error
-    puts "Unable to scan:"
-    puts "#{error.message}"
-  rescue StandardError => error
-    puts "Unknown error"
-    puts "#{error.message}"
   end
 end
 
