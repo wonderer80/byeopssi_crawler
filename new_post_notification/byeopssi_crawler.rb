@@ -98,7 +98,6 @@ def send_message_to_all_channel(text, bot)
   }
 
   loop do
-    begin
       result = dynamodb.scan(params)
 
       result.items.each do |item|
@@ -106,20 +105,22 @@ def send_message_to_all_channel(text, bot)
         next unless chat_id
 
         puts "chat_id: #{item['chat_id']}"
-        bot.api.send_message(chat_id: chat_id, text: text)
+
+        begin
+          bot.api.send_message(chat_id: chat_id, text: text)
+        rescue  Aws::DynamoDB::Errors::ServiceError => error
+          puts "Unable to scan:"
+          puts "#{error.message}"
+        rescue StandardError => error
+          puts "Unknown error"
+          puts "#{error.message}"
+        end
       end
 
       break if result.last_evaluated_key.nil?
 
       puts "Scanning for more..."
       params[:exclusive_start_key] = result.last_evaluated_key
-    rescue  Aws::DynamoDB::Errors::ServiceError => error
-      puts "Unable to scan:"
-      puts "#{error.message}"
-    rescue StandardError => error
-      puts "Unknown error"
-      puts "#{error.message}"
-    end
   end
 end
 
