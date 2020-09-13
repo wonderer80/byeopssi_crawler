@@ -26,6 +26,7 @@ def send_update_message
 
   Telegram::Bot::Client.run(token) do |bot|
     posts = latest_posts.compact
+    pp posts
     posts[0..2].each do |post|
       result = search_post(post[:title])
 
